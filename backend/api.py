@@ -15,14 +15,7 @@ from analyzer import (
 app = Flask(__name__)
 
 # Enable CORS
-CORS(app, 
-     resources={
-         r"/*": {  # Apply to all routes
-             "origins": "https://slug-panel.onrender.com",
-             "allow_headers": ["Content-Type", "Authorization"],
-             "supports_credentials": True
-         }
-     })
+CORS(app)
 
 class VideoAnalysisResponse:
     def __init__(
@@ -57,9 +50,6 @@ class VideoAnalysisResponse:
 @app.route("/analyze", methods=["POST"])
 def analyze_videos():
     try:
-        # Get request data
-        response.headers.add('Access-Control-Allow-Origin', 'https://slug-panel.onrender.com')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
         company_data = request.get_json()
         
         # Validate required fields
@@ -173,9 +163,7 @@ def analyze_videos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/health", methods=["GET"])
-def health_check():
-    return jsonify({"status": "healthy"})
+
 
 if __name__ == "__main__":
     app.run(debug=True)
