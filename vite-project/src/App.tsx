@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
+import axios from 'axios';
 
 type FormData = {
   name: string;
@@ -60,19 +61,13 @@ export default function CompanyAnalysisDashboard() {
     setError('');
 
     try {
-      const response = await fetch( `https://supermind-art.onrender.com/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
+      const response = await axios.post( `https://supermind-art.onrender.com/analyze`, formData);
 
-      if (!response.ok) {
+      if (response.status != 200) {
         throw new Error('Analysis failed');
       }
 
-      const data = await response.json();
+      const data = await response.data
       setAnalysisData(data);
     } catch (err) {
       setError('Failed to analyze videos. Please try again.');
