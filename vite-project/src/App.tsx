@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import axios from 'axios';
 
 type FormData = {
   name: string;
@@ -32,6 +33,7 @@ type AnalysisData = {
   insights: string[];
 } | null;
 
+const BACKEND_URL = import.meta.env.BACKEND_URL
 export default function CompanyAnalysisDashboard() {
   const [loading, setLoading] = useState<boolean>(false);
   const [formData, setFormData] = useState<FormData>({
@@ -57,19 +59,13 @@ export default function CompanyAnalysisDashboard() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/analyze-videos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await axios.post(`${BACKEND_URL}/analyze`,formData);
 
-      if (!response.ok) {
+      if (response.status != 200) {
         throw new Error('Analysis failed');
       }
 
-      const data: AnalysisData = await response.json();
+      const data: AnalysisData =  response.data;
       setAnalysisData(data);
     } catch (err) {
       setError('Failed to analyze videos. Please try again.');
