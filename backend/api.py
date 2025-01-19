@@ -47,9 +47,31 @@ class VideoAnalysisResponse:
             "transcript_length": self.transcript_length
         }
 
+@app.after_request
+def add_cors_headers(response):
+    # Allow the specific origin
+    response.headers['Access-Control-Allow-Origin'] = 'https://supermind-art.vercel.app'
+    
+    # Allow credentials
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    
+    # Allow specific headers
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    
+    # Allow specific methods
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS, PUT, DELETE'
+    
+    # Allow the browser to cache preflight requests for 1 hour
+    response.headers['Access-Control-Max-Age'] = '3600'
+    
+    return response
 @app.route("/analyze", methods=["POST"])
 def analyze_videos():
     try:
+        if request.method == 'OPTIONS':
+        # Return empty response for OPTIONS request
+            response = app.make_default_options_response()
+            return response
         company_data = request.get_json()
         
         # Validate required fields
