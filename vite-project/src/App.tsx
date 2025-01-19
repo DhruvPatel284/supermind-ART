@@ -60,7 +60,7 @@ export default function CompanyAnalysisDashboard() {
     setError('');
 
     try {
-      const response = await axios.post( `https://supermind-art.onrender.com/analyze`, formData);
+      const response = await axios.post("https://supermind-art.onrender.com/analyze",formData);
 
       if (response.status != 200) {
         throw new Error('Analysis failed');
