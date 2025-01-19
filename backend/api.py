@@ -15,7 +15,13 @@ from analyzer import (
 app = Flask(__name__)
 
 # Enable CORS
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000", "https://supermind-art.vercel.app/"],
+        "methods": ["*"],
+        "allow_headers": ["*"]
+    }
+})
 
 class VideoAnalysisResponse:
     def __init__(
