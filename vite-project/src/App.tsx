@@ -35,7 +35,6 @@ type AnalysisData = {
   };
   insights: string[];
 } | null;
-const BACKEND_URL = import.meta.env.BACKEND_URL
 export default function CompanyAnalysisDashboard() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
