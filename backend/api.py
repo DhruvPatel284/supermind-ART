@@ -15,7 +15,14 @@ from analyzer import (
 app = Flask(__name__)
 
 # Enable CORS
-CORS(app)
+CORS(app, 
+     resources={
+         r"/*": {  # Apply to all routes
+             "origins": "https://slug-panel.onrender.com",
+             "allow_headers": ["Content-Type", "Authorization"],
+             "supports_credentials": True
+         }
+     })
 
 class VideoAnalysisResponse:
     def __init__(
@@ -51,6 +58,8 @@ class VideoAnalysisResponse:
 def analyze_videos():
     try:
         # Get request data
+        response.headers.add('Access-Control-Allow-Origin', 'https://slug-panel.onrender.com')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
         company_data = request.get_json()
         
         # Validate required fields
