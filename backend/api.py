@@ -17,9 +17,11 @@ app = Flask(__name__)
 # Enable CORS
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000", "https://supermind-art.vercel.app/"],
-        "methods": ["*"],
-        "allow_headers": ["*"]
+        "origins": ["http://localhost:3000", "https://supermind-art.vercel.app"],  # Remove trailing slash
+        "methods": ["GET", "POST", "OPTIONS"],  # Explicitly specify methods
+        "allow_headers": ["Content-Type", "Authorization"],  # Specify required headers
+        "supports_credentials": True,  # Enable if you're using credentials
+        "max_age": 3600  # Cache preflight requests for 1 hour
     }
 })
 
