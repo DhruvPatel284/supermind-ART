@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional, Dict
+from flask import Flask, request, jsonify
+from typing import List, Dict
 import asyncio
-from fastapi.middleware.cors import CORSMiddleware
+from flask_cors import CORS
+import json
 
-# Import your existing classes
+# Import your existing analyzer classes
 from analyzer import (
     VideoParameterAnalyzer,
     CompanyInfo,
@@ -12,36 +12,52 @@ from analyzer import (
     YouTubeAnalyzer
 )
 
-app = FastAPI(title="Video Analysis API")
+app = Flask(__name__)
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://supermind-art.vercel.app/"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Enable CORS
+CORS(app)
 
+class VideoAnalysisResponse:
+    def __init__(
+        self,
+        competitors: List[str],
+        video_analysis: List[Dict],
+        top_parameters: List[tuple],
+        top_impact_metrics: List[tuple],
+        insights: List[str],
+        sentiment_analysis: Dict[str, float],
+        transcript_length: int
+    ):
+        self.competitors = competitors
+        self.video_analysis = video_analysis
+        self.top_parameters = top_parameters
+        self.top_impact_metrics = top_impact_metrics
+        self.insights = insights
+        self.sentiment_analysis = sentiment_analysis
+        self.transcript_length = transcript_length
 
-# Pydantic models for request/response
-class CompanyRequest(BaseModel):
-    name: str
-    domain: str
-    description: str
-    ad_objective: str
+    def to_dict(self):
+        return {
+            "competitors": self.competitors,
+            "video_analysis": self.video_analysis,
+            "top_parameters": self.top_parameters,
+            "top_impact_metrics": self.top_impact_metrics,
+            "insights": self.insights,
+            "sentiment_analysis": self.sentiment_analysis,
+            "transcript_length": self.transcript_length
+        }
 
-class VideoAnalysisResponse(BaseModel):
-    competitors: List[str]
-    video_analysis: List[Dict]
-    top_parameters: List[tuple]
-    top_impact_metrics: List[tuple]
-    insights: List[str]
-    sentiment_analysis: Dict[str, float]
-    transcript_length: int
-
-@app.post("/analyze", response_model=VideoAnalysisResponse)
-async def analyze_videos(company_data: CompanyRequest):
+@app.route("/analyze", methods=["POST"])
+def analyze_videos():
     try:
+        # Get request data
+        company_data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ["name", "domain", "description", "ad_objective"]
+        if not all(field in company_data for field in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
+
         # Initialize analyzers
         competitor_analyzer = CompetitorAnalyzer()
         youtube_analyzer = YouTubeAnalyzer()
@@ -49,10 +65,10 @@ async def analyze_videos(company_data: CompanyRequest):
         
         # Create company info instance
         company_info = CompanyInfo(
-            name=company_data.name,
-            domain=company_data.domain,
-            description=company_data.description,
-            ad_objective=company_data.ad_objective
+            name=company_data["name"],
+            domain=company_data["domain"],
+            description=company_data["description"],
+            ad_objective=company_data["ad_objective"]
         )
         
         # Get competitors
@@ -130,9 +146,10 @@ async def analyze_videos(company_data: CompanyRequest):
         )[:5]
         
         # Analyze sentiment
-        sentiment_results = await video_analyzer.analyze_sentiment(all_comments)
+        sentiment_results = asyncio.run(video_analyzer.analyze_sentiment(all_comments))
         
-        return VideoAnalysisResponse(
+        # Create response object
+        response = VideoAnalysisResponse(
             competitors=competitors,
             video_analysis=video_analysis_results,
             top_parameters=top_5_params,
@@ -142,9 +159,14 @@ async def analyze_videos(company_data: CompanyRequest):
             transcript_length=len(transcript_text)
         )
         
+        return jsonify(response.to_dict())
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return jsonify({"error": str(e)}), 500
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "healthy"})
+
+if __name__ == "__main__":
+    app.run(debug=True)

@@ -1,15 +1,17 @@
-import { useState, ChangeEvent, FormEvent } from 'react';
-import { BarChart2, Users, Eye, ThumbsUp, MessageCircle, Loader } from 'lucide-react';
+import  { useState, ChangeEvent, FormEvent } from 'react';
+import {  Users, Eye, ThumbsUp, MessageCircle, TrendingUp, Loader } from 'lucide-react';
 import {
+  BarChart,
+  Bar,
   LineChart,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Cell
 } from 'recharts';
-import axios from 'axios';
 
 type FormData = {
   name: string;
@@ -22,20 +24,19 @@ type AnalysisData = {
   competitors: string[];
   video_analysis: {
     title: string;
-    report: string;
-    metrics: Record<string, { overall_impact: number }>;
+    metrics: Record<string, { overall_impact: number; parameter_score: number }>;
   }[];
-  top_parameters: Record<string, number>[];
+  top_parameters: [string, number][];
+  top_impact_metrics: [string, { overall_impact: number }][];
   sentiment_analysis: {
     positive: number;
     negative: number;
-  } | null;
+  };
   insights: string[];
 } | null;
-
-const BACKEND_URL = import.meta.env.BACKEND_URL;
+const BACKEND_URL = import.meta.env.BACKEND_URL
 export default function CompanyAnalysisDashboard() {
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     domain: '',
@@ -43,7 +44,7 @@ export default function CompanyAnalysisDashboard() {
     ad_objective: ''
   });
   const [analysisData, setAnalysisData] = useState<AnalysisData>(null);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -59,13 +60,19 @@ export default function CompanyAnalysisDashboard() {
     setError('');
 
     try {
-      const response = await axios.post(`https://supermind-art.onrender.com/analyze`,formData);
+      const response = await fetch( `${BACKEND_URL}/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
 
-      if (response.status != 200) {
+      if (!response.ok) {
         throw new Error('Analysis failed');
       }
 
-      const data: AnalysisData =  response.data;
+      const data = await response.json();
       setAnalysisData(data);
     } catch (err) {
       setError('Failed to analyze videos. Please try again.');
@@ -73,13 +80,151 @@ export default function CompanyAnalysisDashboard() {
       setLoading(false);
     }
   };
- //@ts-ignore
-  const formatSentimentData = (sentiment: AnalysisData['sentiment_analysis']) => {
-    if (!sentiment) return [];
-    return [
-      { name: 'Positive', value: sentiment.positive },
-      { name: 'Negative', value: sentiment.negative }
+
+  const colors = {
+    positive: '#22c55e',
+    negative: '#ef4444',
+    primary: '#2563eb'
+  };
+
+  const renderAnalysisDashboard = () => {
+    if (!analysisData) return null;
+
+    const sentimentData = [
+      { name: 'Positive', value: analysisData.sentiment_analysis.positive },
+      { name: 'Negative', value: analysisData.sentiment_analysis.negative }
     ];
+
+    const metricsData = analysisData.top_parameters?.map(([name, score]) => ({
+      name,
+      score,
+      //@ts-ignore
+      impact: analysisData.top_impact_metrics?.find(([metricName]) => metricName === name)?.[1]?.overall_impact * 100 || 0
+    }));
+
+    return (
+      <div className="space-y-6 mt-8">
+        {/* Competitors Section */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Users className="text-blue-600" />
+            Main Competitors
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {analysisData.competitors.map((competitor, index) => (
+              <div key={index} className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <span className="font-medium text-blue-900">{competitor}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Sentiment Analysis */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <MessageCircle className="text-blue-600" />
+              Sentiment Distribution
+            </h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sentimentData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis domain={[0, 100]} />
+                 
+                  <Tooltip formatter={(value:any) => `${value.toFixed(2)}%`} />
+                  <Bar dataKey="value" fill={colors.primary}>
+                    {sentimentData.map((entry, index) => (
+                      <Cell 
+                        key={index} 
+                        fill={entry.name === 'Positive' ? colors.positive : colors.negative}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Metrics Impact */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <TrendingUp className="text-blue-600" />
+              Metrics Impact Analysis
+            </h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={metricsData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
+                  <YAxis yAxisId="left" orientation="left" stroke={colors.primary} />
+                  <YAxis yAxisId="right" orientation="right" stroke={colors.positive} />
+                  <Tooltip />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="score" 
+                    stroke={colors.primary} 
+                    strokeWidth={2}
+                    name="Parameter Score"
+                  />
+                  <Line 
+                    yAxisId="right"
+                    type="monotone" 
+                    dataKey="impact" 
+                    stroke={colors.positive} 
+                    strokeWidth={2}
+                    name="Impact %"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Video Analysis */}
+          <div className="md:col-span-2 bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Eye className="text-blue-600" />
+              Video Analysis
+            </h2>
+            <div className="space-y-6">
+              {analysisData.video_analysis.map((video, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-3">{video.title}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {Object.entries(video.metrics).map(([key, value], i) => (
+                      <div key={i} className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">{key}</p>
+                        <p className="font-medium">Score: {value.parameter_score.toFixed(1)}</p>
+                        <p className="text-sm text-gray-500">
+                          Impact: {(value.overall_impact * 100).toFixed(2)}%
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Insights */}
+          <div className="md:col-span-2 bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <ThumbsUp className="text-blue-600" />
+              Key Insights
+            </h2>
+            <div className="space-y-3">
+              {analysisData.insights.map((insight, index) => (
+                <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-gray-700">{insight}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -180,106 +325,8 @@ export default function CompanyAnalysisDashboard() {
           </div>
         )}
 
-        {/* Results Section */}
-        {analysisData && (
-          <div className="space-y-8">
-            {/* Competitors Section */}
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600" />
-                Main Competitors
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {analysisData.competitors.map((competitor, index) => (
-                  <div key={index} className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <span className="font-medium text-blue-900">{competitor}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Video Analysis */}
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Eye className="w-5 h-5 text-blue-600" />
-                Video Performance Analysis
-              </h2>
-              <div className="grid grid-cols-1 gap-4">
-                {analysisData.video_analysis.map((video, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h3 className="font-medium text-lg mb-2">{video.title}</h3>
-                    <p className="text-gray-600 whitespace-pre-line">{video.report}</p>
-                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {Object.entries(video.metrics).map(([key, value]) => (
-                        <div key={key} className="bg-white p-3 rounded-lg border border-gray-200">
-                          <div className="text-sm text-gray-500">{key}</div>
-                          <div className="font-medium">{value.overall_impact.toFixed(2)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Parameters & Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Top Parameters */}
-              <div className="bg-white p-6 rounded-xl shadow-sm">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <BarChart2 className="w-5 h-5 text-blue-600" />
-                  Top Parameters
-                </h2>
-                <div className="space-y-4">
-                  {analysisData.top_parameters.map((param, index) => (
-                    <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                      {Object.entries(param).map(([key, value]) => (
-                        <div key={key} className="flex justify-between items-center">
-                          <span className="font-medium">{key}</span>
-                          <span className="text-blue-600">{value.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sentiment Analysis */}
-              <div className="bg-white p-6 rounded-xl shadow-sm">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5 text-blue-600" />
-                  Sentiment Analysis
-                </h2>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={formatSentimentData(analysisData.sentiment_analysis)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            {/* Insights */}
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <ThumbsUp className="w-5 h-5 text-blue-600" />
-                Recommendations
-              </h2>
-              <ul className="space-y-3">
-                {analysisData.insights.map((insight, index) => (
-                  <li key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    {insight}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
+        {/* Analysis Dashboard */}
+        {renderAnalysisDashboard()}
       </div>
     </div>
   );
