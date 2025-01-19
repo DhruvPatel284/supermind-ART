@@ -17,10 +17,11 @@ app = FastAPI(title="Video Analysis API")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "https://supermind-art.vercel.app/"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Pydantic models for request/response
 class CompanyRequest(BaseModel):
