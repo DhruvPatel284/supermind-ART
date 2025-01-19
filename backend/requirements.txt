@@ -11,3 +11,4 @@ googletrans
 python-multipart
 typing-extensions
 aiohttp
+gunicorn==21.2.0
