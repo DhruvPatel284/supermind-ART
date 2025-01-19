@@ -411,9 +411,6 @@ class YouTubeAnalyzer:
             insights = response.choices[0].message.content.strip().split(',')
             return insights
 
-
-
-
 def main():
         print("Starting analysis...")
         # Load environment variables
