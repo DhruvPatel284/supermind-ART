@@ -60,7 +60,7 @@ export default function CompanyAnalysisDashboard() {
     setError('');
 
     try {
-      const response = await fetch( `${BACKEND_URL}/analyze`, {
+      const response = await fetch( `https://supermind-art.onrender.com/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
