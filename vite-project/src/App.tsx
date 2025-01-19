@@ -33,7 +33,7 @@ type AnalysisData = {
   insights: string[];
 } | null;
 
-const BACKEND_URL = import.meta.env.BACKEND_URL
+const BACKEND_URL = import.meta.env.BACKEND_URL;
 export default function CompanyAnalysisDashboard() {
   const [loading, setLoading] = useState<boolean>(false);
   const [formData, setFormData] = useState<FormData>({
@@ -59,7 +59,7 @@ export default function CompanyAnalysisDashboard() {
     setError('');
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/analyze`,formData);
+      const response = await axios.post(`https://supermind-art.onrender.com/analyze`,formData);
 
       if (response.status != 200) {
         throw new Error('Analysis failed');
